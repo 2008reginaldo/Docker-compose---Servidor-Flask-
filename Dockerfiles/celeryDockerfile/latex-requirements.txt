@@ -1,0 +1,6 @@
+texlive-base 
+texlive-latex-recommended 
+poppler-utils
+texlive-latex-extra 
+texlive-extra-utils
+texlive-lang-portuguese

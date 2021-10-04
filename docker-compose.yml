@@ -1,0 +1,107 @@
+version: '3.3'
+
+services:
+  exgen-flask:
+    build: ./app
+    container_name: flask_container
+    image: exgen-flask
+
+    # Incluir as seguintes linhas no .bashrc para que a opção user
+    # export UID=${UID}
+    # export GID=${GID}
+    # funcione corretamente. Esta opção é necessária para que os
+    # arquivos criados não fiquem associados ao root.
+    user: "${MYUID}:${MYGID}"
+    # user: "1000:1000"
+
+    environment:
+      # - CELERY_BROKER=redis:redis://redis:6379/0
+      # - CELERY_BACKEND=redis://redis:6379/0
+      # - FLASK_ENV=production
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1 # para printar o stdout do flask
+
+    volumes:
+      - ./app/:/app
+    ports:
+      - "5000:5000"
+    restart: always
+    # command: ["ls"]
+    depends_on:
+      - redis
+
+    # links:
+    #     - redis:redis  
+    # este é o comando que funciona direto no terminal
+    # command: sh -c "celery --broker=redis://redis:6379 -A flaskblog.questions.utils worker --loglevel=info &"
+
+    # command: sh -c "celery -A flaskblog.questions.utils worker --loglevel=info"
+    # command: sh -c "bash"
+    command: sh -c "flask run && bash"
+  
+  
+  
+  redis:
+    container_name: flask_redis
+    image: redis
+    # command: redis-server --requirepass Redis2019!
+    ports:
+      - "6379:6379"
+    expose:
+        - "6379"  
+  
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   # hostname: my-rabbit
+  #   # volumes:
+  #   #   - ./rabbitmq/etc/definitions.json:/etc/rabbitmq/definitions.json
+  #   #   - ./rabbitmq/etc/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+  #   #   - ./rabbitmq/data:/var/lib/rabbitmq/mnesia/rabbit@my-rabbit
+  #   #   - ./rabbitmq/logs:/var/log/rabbitmq/log
+  #   ports:
+  #     - 5672:5672    
+  
+  
+  celery_worker:
+    image: celery-worker
+    environment:
+      - MAPPED_PATH=${PWD}/app/
+      - FILEOWNER=$$(id -u ${USER}):$$(id -g ${USER})
+      # - CELERY_RESULT_BACKEND=redis://redis:6379
+    # command: sh -c "ls /"
+    # command: sh -c "celery worker --workdir=/app/ -A 'flaskblog.questions.utils' --loglevel=info"
+    # command: sh -c "celery --broker=redis://redis:6379 -A flaskblog.questions.utils worker --loglevel=info"
+    command: sh -c "celery -A flaskblog.questions.utils worker --loglevel=info"
+    # command: ["celery", "-A", "utils", "worker", "-l", "INFO"]
+    container_name: celery_worker
+    volumes:
+      - ./app/:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+      # - rabbitmq
+
+# volumes:
+#   exgen-volume:
+    # command: ['celery', '-A', 'mnt.flask.flaskblog.questions.utils', 'worker', '--loglevel', 'info']
+    # command: ['celery', '-A', 'mnt.flask.flaskblog.questions.utils', 'worker', '--loglevel', 'info']
+
+
+    # deploy:
+    #   replicas: 2
+    #   restart_policy:
+    #     condition: on-failure
+    #   resources:
+    #     limits:
+    #       cpus: '0.50'
+    #       memory: 50M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 20M
+    # hostname: celery_worker
+    # image: app-image
+    # networks:
+    #   - main
+    # restart: on-failure
+
+
